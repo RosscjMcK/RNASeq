@@ -60,3 +60,7 @@ dds2keep$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
 dds2keepDET_T <- DESeq(dds2keep)
 res2keepT_T0.05 <- results(dds2keepDET_T, alpha = 0.05)
 summary(res2keepT_T0.05)
+
+resultsNames(dds2keepDET_T)
+
+plotMA(res2keepT_T0.05)
