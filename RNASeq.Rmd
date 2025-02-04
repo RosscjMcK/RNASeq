@@ -1,4 +1,16 @@
-setwd("/Users/mckenzir/Desktop/Others/RNAseq")
+---
+title: "RNASeq analysis"
+output: html_document
+date: "2025-02-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## starting info
+
+setwd('Desktop/Others/RNAseq/')
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
@@ -60,3 +72,28 @@ dds2keep$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
 dds2keepDET_T <- DESeq(dds2keep)
 res2keepT_T0.05 <- results(dds2keepDET_T, alpha = 0.05)
 summary(res2keepT_T0.05)
+
+
+
+
+
+
+
+
+
+
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
