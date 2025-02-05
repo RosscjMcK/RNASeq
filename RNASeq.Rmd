@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## starting info
 
-setwd('Desktop/Others/RNAseq/')
+setwd("/Users/mckenzir/Desktop/Others/RNAseq")
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
@@ -21,15 +21,11 @@ library(tidyverse)
 #https://github.com/kpatel427/YouTubeTutorials/blob/main/runDESeq2.R
 
 read.csv('counts_matrix.csv') -> counts_matrix
-#Comes with X in front of the names so chose to load the R data files prepared by Andrew instead
 read.csv('filtered_counts_matrix.csv') -> filtered_counts_matrix
 read.csv('sample_info.csv') -> sample_info
-
+#Comes with X in front of the names so chose to load the R data files prepared by Andrew instead
 load("~/Desktop/Others/RNAseq/counts_matrix.RData")
 load("~/Desktop/Others/RNAseq/filtered_counts_matrix.RData")
-
-all(colnames(counts_matrix) %in% rownames(sample_info))
-all(colnames(counts_matrix) == rownames(sample_info))
 
 #The row names were 1-24 so they needed to be changed to the actual names of the samples
 
@@ -37,28 +33,180 @@ rownames(sample_info) <- c('1b_1h_IL12','1h_1h_IL12','1b_1h_IL18','1h_6h_null','
                            '1e_1h_IL18','1h_6h_IL18','1b_6h_IL12','1e_6h_null','1h_1h_IL18','1b_6h_null',
                            '1e_1h_IL12','1h_6h_IL12','1e_1h_null','1b_1h_null','1h_1h_aCD3','1e_6h_aCD3',
                            '1h_6h_aCD3','1h_1h_null','1e_1h_aCD3','1b_1h_aCD3','1e_6h_IL12','1b_6h_aCD3')
+                           
+#Checks to see if row and column names match              
+all(colnames(counts_matrix) %in% rownames(sample_info))
+all(colnames(counts_matrix) == rownames(sample_info))
+
+```{r DESeq, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Starting to run DESeq - using Time_treatment
 
 dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = sample_info,
                               design = ~ Time_treatment)
 
-dds2 <- DESeqDataSetFromMatrix(countData = counts_matrix,
-                              colData = sample_info,
-                              design = ~ Time + Treatment)
+#Pre-filtering
+
+smallestGroupSize <- 4
+keep <- rowSums(counts(dds) >= 200) >= smallestGroupSize
+ddskeep <- dds[keep,]
+
+#Reference level
+
+ddskeep$Time_treatment <- factor(dds$Time_treatment, levels = c("1h_PBS"))
+#"6h_PBS", "1h_CD3", "6h_CD3", "1h_IL12", "6h_IL12", "1h_IL18", "6h_IL18"
+
+#droplevel to check if samples are blank
+ddskeep$Time_treatment <- droplevels(dds$Time_treatment)
+
+ddskept <- DESeq(ddskeep)
+ddskept
+res <- results(ddskept)
+res
+
+resPBS <- results(ddskept, contrast=c("Time_treatment","1h_PBS","6h_PBS"))
+
+resultsNames(ddskept)
+
+#Order by pvalue 
+resOrdered <- res[order(res$pvalue),]
+
+#significance of 0.05
+res05 <- results(ddskept, alpha=0.05)
+summary(res05)
+
+#MAplot for these results
+plotMA(res05, ylim=c(-2,2))
+
+plotMA(res05, ylim=c(-3,3))
+
+plotMA(res05, ylim=c(-10,3))
+
+idx <- identify(res05$baseMean, res05$log2FoldChange)
+rownames(res05)[idx]
+
+#942 = Ifng, 3842 = Tnf
+
+plotCounts(ddskept, gene=which.min(res$padj), intgroup="Time_treatment")
+
+plotCounts(ddskept, "Ifng",intgroup="Time_treatment")
+plotCounts(ddskept, "Tnf",intgroup="Time_treatment")
+
+#A nicer plot
+library("ggplot2")
+d <- plotCounts(ddskept, "Ifng",intgroup="Time_treatment", 
+                returnData=TRUE)
+ggplot(d, aes(x=Time_treatment, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) +
+  scale_y_log10(breaks=c(0,1000,5000,10000,50000,100000,500000))
+
+e <- plotCounts(ddskept, "Tnf",intgroup="Time_treatment", 
+                returnData=TRUE)
+ggplot(e, aes(x=Time_treatment, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) +
+  scale_y_log10(breaks=c(0,1000,5000,10000,50000))
+  
+```{r Heatmap DESeq, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+install.packages('pheatmap')
+library("pheatmap")
+
+ntd <- normTransform(ddskept)
+#Need normalised data for the heatmap
+#Can do these transformations too
+vsd <- vst(ddskept, blind=FALSE)
+rld <- rlog(ddskept, blind=FALSE)
+
+select <- order(rowMeans(counts(ddskept,normalized=TRUE)),
+                decreasing=TRUE)[1:20]
+df <- as.data.frame(colData(ddskept)[,c("Time_treatment","Mouse")])
+pheatmap(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=TRUE,
+         cluster_cols=FALSE, annotation_col=df)
+
+#Can do these heatmaps with the other data transformations too
+pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=TRUE,
+         cluster_cols=FALSE, annotation_col=df)
+
+pheatmap(assay(rld)[select,], cluster_rows=FALSE, show_rownames=TRUE,
+         cluster_cols=FALSE, annotation_col=df)
+         
+#Sample to sample distances
+sampleDists <- dist(t(assay(vsd)))
+
+install.packages("RColorBrewer")
+library("RColorBrewer")
+
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(vsd$Sample_name, sep="-")
+colnames(sampleDistMatrix) <- paste(vsd$Sample_name, sep="-")
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+
+#PCA plot
+plotPCA(vsd, intgroup=c("Time", "Treatment"))
+
+plotPCA(vsd, intgroup=c("Time_treatment", "Replicate"))
+
+plotPCA(vsd, intgroup=c("Sex", "Mouse"))
+
+#Time and treatment
+pcaData <- plotPCA(vsd, intgroup=c("Time", "Treatment"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+ggplot(pcaData, aes(PC1, PC2, color=Time, shape=Treatment)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed()
+
+#Sex and Mouse
+pcaData2 <- plotPCA(vsd, intgroup=c("Sex", "Mouse"), returnData=TRUE)
+percentVar2 <- round(100 * attr(pcaData2, "percentVar"))
+ggplot(pcaData2, aes(PC1, PC2, color=Sex, shape=Mouse)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar2[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar2[2],"% variance")) + 
+  coord_fixed()
+
+```{r multifactor DESeq, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Don't think this works for the data set
+
+colData(dds)
+ddsMF <- dds
+
+levels(ddsMF$Time_treatment)
+
+levels(ddsMF$Time_treatment) <- sub("_-.*", "", levels(ddsMF$Time_treatment))
+levels(ddsMF$Time_treatment)
+
+design(ddsMF) <- formula(~ Time_treatment)
+ddsMF <- DESeq(ddsMF)
+
+resMF <- results(ddsMF)
+head(resMF)
+
+```{r Other DESeq, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 ddsDE <- DESeq(dds)
-ddsDE2 <- DESeq(dds2)
 
 resultsNames(ddsDE)
-resultsNames(ddsDE2)
 
 keepdds_200 <- rowSums(counts(dds)) >= 200
-keepdds2_200 <- rowSums(counts(dds2)) >= 200
 
 ddskeep <- dds[keepdds_200,]
-dds2keep <- dds2[keepdds2_200,]
 
 dds$Time_treatment <- factor(dds$Time_treatment, levels = c("PBS"))
-dds2$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
 
 ddsDET_T <- DESeq(dds2)
 resT_T <- results(ddsDET_T)
@@ -68,24 +216,32 @@ summary(resT_T)
 resT_T0.05 <- results(ddsDET_T, alpha = 0.05)
 summary(resT_T0.05)
 
+
+```{r DESeq with Time and Treatment, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+dds2 <- DESeqDataSetFromMatrix(countData = counts_matrix,
+                              colData = sample_info,
+                              design = ~ Time + Treatment)
+
+ddsDE2 <- DESeq(dds2)
+resultsNames(ddsDE2)
+
+keepdds2_200 <- rowSums(counts(dds2)) >= 200
+dds2keep <- dds2[keepdds2_200,]
+
+dds2$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
+
+#Filtered to remove any genes with fewer than 200 counts
+
 dds2keep$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
 dds2keepDET_T <- DESeq(dds2keep)
 res2keepT_T0.05 <- results(dds2keepDET_T, alpha = 0.05)
 summary(res2keepT_T0.05)
 
-
-
-
-
-
-
-
-
-
-
-
 ```{r cars}
-summary(cars)
+
 ```
 
 ## Including Plots
@@ -93,7 +249,7 @@ summary(cars)
 You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
