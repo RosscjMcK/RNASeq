@@ -175,10 +175,42 @@ ggplot(pcaData2, aes(PC1, PC2, color=Sex, shape=Mouse)) +
   ylab(paste0("PC2: ",percentVar2[2],"% variance")) + 
   coord_fixed()
 
+```{r Contrasts DESeq, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#All seems like a repeat of above
+#In the MAplot section
+
+results(ddskept, contrast=c("Time_treatment","1h_PBS" ,"1h_CD3" ))
+#contrast = c(factor, numerator, denominator)
+
+resultsNames(ddskept)
+#"Intercept""Time_treatment_1h_IL12_vs_1h_CD3""Time_treatment_1h_IL18_vs_1h_CD3""Time_treatment_1h_PBS_vs_1h_CD3""Time_treatment_6h_CD3_vs_1h_CD3""Time_treatment_6h_IL12_vs_1h_CD3""Time_treatment_6h_IL18_vs_1h_CD3" "Time_treatment_6h_PBS_vs_1h_CD3" 
+
+#Interactions
+
+ddskept$Time_treatment <- factor(paste0(ddskept$Time, ddskept$Treatment))
+design(ddskept) <- ~ Time_treatment
+ddsK <- DESeq(ddskept)
+resultsNames(ddsK)
+
+#Potentially have to do all "1hPBS", "6hPBS", "1hCD3", "6hCD3", "1hIL12", "6hIL12", "1hIL18", "6hIL18"
+results(ddsK, contrast=c("Time_treatment", "1hPBS", "1hCD3"))
+
+PCa <- plotCounts(ddsK, 'Ifng', intgroup="Time_treatment", 
+                returnData=TRUE)
+                
+ggplot(PCa, aes(x=Time_treatment, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) + scale_y_log10(breaks=c(0, 1000,5000,10000,50000,100000))
+
+
+
 ```{r multifactor DESeq, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 #Don't think this works for the data set
+#ends up being the same as the analysis above
 
 colData(dds)
 ddsMF <- dds
@@ -197,6 +229,7 @@ head(resMF)
 ```{r Other DESeq, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+#Need to run this again to check it all and compare it to the analysis above
 
 ddsDE <- DESeq(dds)
 
@@ -220,6 +253,7 @@ summary(resT_T0.05)
 ```{r DESeq with Time and Treatment, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+#Need to run this again to check it all and compare it to the analysis above
 
 dds2 <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = sample_info,
