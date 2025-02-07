@@ -23,6 +23,7 @@ library(tidyverse)
 read.csv('counts_matrix.csv') -> counts_matrix
 read.csv('filtered_counts_matrix.csv') -> filtered_counts_matrix
 read.csv('sample_info.csv') -> sample_info
+
 #Comes with X in front of the names so chose to load the R data files prepared by Andrew instead
 load("~/Desktop/Others/RNAseq/counts_matrix.RData")
 load("~/Desktop/Others/RNAseq/filtered_counts_matrix.RData")
@@ -73,10 +74,13 @@ resultsNames(ddskept)
 
 #Order by pvalue 
 resOrdered <- res[order(res$pvalue),]
+resOrdered
 
 #significance of 0.05
 res05 <- results(ddskept, alpha=0.05)
 summary(res05)
+res05
+res05 <- res05[order(res$pvalue),]
 
 #MAplot for these results
 plotMA(res05, ylim=c(-2,2))
@@ -231,6 +235,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 #Need to run this again to check it all and compare it to the analysis above
 
+dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
+                              colData = sample_info,
+                              design = ~ Time_treatment)
+
 ddsDE <- DESeq(dds)
 
 resultsNames(ddsDE)
@@ -258,6 +266,54 @@ knitr::opts_chunk$set(echo = TRUE)
 dds2 <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = sample_info,
                               design = ~ Time + Treatment)
+
+#Pre-filtering
+
+smallestGroupSize <- 4
+keep2 <- rowSums(counts(dds2) >= 200) >= smallestGroupSize
+dds2keep <- dds2[keep2,]
+
+#Reference level
+
+resultsNames(dds2kept)
+
+dds2keep$Time <- factor(dds2$Time, levels = c("1h"))
+#"6h_PBS", "1h_CD3", "6h_CD3", "1h_IL12", "6h_IL12", "1h_IL18", "6h_IL18"
+
+#droplevel to check if samples are blank
+dds2keep$Time_treatment <- droplevels(dds2$Time_treatment)
+
+dds2kept <- DESeq(dds2keep)
+dds2kept
+res2 <- results(dds2kept)
+res2
+
+resultsNames(dds2kept)
+
+#significance of 0.05
+res205 <- results(dds2kept, alpha=0.05)
+summary(res205)
+res205
+res205 <- res205[order(res$pvalue),]
+
+
+#MAplot for these results
+plotMA(res205, ylim=c(-2,2))
+
+plotMA(res205, ylim=c(-15,2))
+
+idx <- identify(res205$baseMean, res205$log2FoldChange)
+rownames(res205)[idx]
+
+vsd2 <- vst(dds2kept, blind=FALSE)
+
+
+plotPCA(vsd2, intgroup=c("Time", "Treatment"))
+
+plotPCA(vsd2, intgroup=c("Sex", "Mouse"))
+
+
+
 
 ddsDE2 <- DESeq(dds2)
 resultsNames(ddsDE2)
