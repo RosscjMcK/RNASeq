@@ -51,13 +51,14 @@ dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
 
 #Pre-filtering
 
-smallestGroupSize <- 4
+smallestGroupSize <- 3
 keep <- rowSums(counts(dds) >= 200) >= smallestGroupSize
 ddskeep <- dds[keep,]
 
 #Reference level
 
 ddskeep$Time_treatment <- factor(dds$Time_treatment, levels = c("1h_PBS"))
+
 #"6h_PBS", "1h_CD3", "6h_CD3", "1h_IL12", "6h_IL12", "1h_IL18", "6h_IL18"
 
 #droplevel to check if samples are blank
@@ -68,7 +69,131 @@ ddskept
 res <- results(ddskept)
 res
 
-resPBS <- results(ddskept, contrast=c("Time_treatment","1h_PBS","6h_PBS"))
+#6h PBS vs 1h PBS
+resPBS <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_PBS","1h_PBS"))
+resPBS
+summary(resPBS)
+resPBS <- resPBS[order(res$pvalue),]
+
+plotMA(resPBS, ylim=c(-3,7))
+
+idx <- identify(resPBS$baseMean, resPBS$log2FoldChange)
+rownames(resPBS)[idx]
+
+
+#1h CD3 vs 1h PBS
+res1hPBSCD3 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","1h_CD3","1h_PBS"))
+res1hPBSCD3
+summary(res1hPBSCD3)
+res1hPBSCD3 <- res1hPBSCD3[order(res$pvalue),]
+
+plotMA(res1hPBSCD3, ylim=c(-2,11))
+
+idx <- identify(res1hPBSCD3$baseMean, res1hPBSCD3$log2FoldChange)
+rownames(res1hPBSCD3)[idx]
+
+
+#1h IL12 vs 1h PBS
+res1hPBSIL12 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","1h_IL12","1h_PBS"))
+res1hPBSIL12
+summary(res1hPBSIL12)
+res1hPBSIL12 <- res1hPBSIL12[order(res$pvalue),]
+
+plotMA(res1hPBSIL12, ylim=c(-3,5))
+
+idx <- identify(res1hPBSIL12$baseMean, res1hPBSIL12$log2FoldChange)
+rownames(res1hPBSIL12)[idx]
+
+
+#1h IL18 vs 1h PBS
+res1hPBSIL18 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","1h_IL18","1h_PBS"))
+res1hPBSIL18
+summary(res1hPBSIL18)
+res1hPBSIL18 <- res1hPBSIL18[order(res$pvalue),]
+
+plotMA(res1hPBSIL18, ylim=c(-2,2))
+
+idx <- identify(res1hPBSIL18$baseMean, res1hPBSIL18$log2FoldChange)
+rownames(res1hPBSIL18)[idx]
+
+
+#6h CD3 vs 6h PBS
+res6hPBSCD3 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_CD3","6h_PBS"))
+res6hPBSCD3
+summary(res6hPBSCD3)
+res6hPBSCD3 <- res6hPBSCD3[order(res$pvalue),]
+
+plotMA(res6hPBSCD3, ylim=c(-3,15))
+
+idx <- identify(res6hPBSCD3$baseMean, res6hPBSCD3$log2FoldChange)
+rownames(res6hPBSCD3)[idx]
+
+
+#6h IL12 vs 6h PBS
+res6hPBSIL12 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL12","6h_PBS"))
+res6hPBSIL12
+summary(res6hPBSIL12)
+res6hPBSIL12 <- res6hPBSIL12[order(res$pvalue),]
+
+plotMA(res6hPBSIL12, ylim=c(-4,8))
+
+idx <- identify(res6hPBSIL12$baseMean, res6hPBSIL12$log2FoldChange)
+rownames(res6hPBSIL12)[idx]
+
+
+#6h IL18 vs 6h PBS
+res6hPBSIL18 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL18","6h_PBS"))
+res6hPBSIL18
+summary(res6hPBSIL18)
+res6hPBSIL18 <- res6hPBSIL18[order(res$pvalue),]
+
+plotMA(res6hPBSIL18, ylim=c(-2,6))
+
+idx <- identify(res6hPBSIL18$baseMean, res6hPBSIL18$log2FoldChange)
+rownames(res6hPBSIL18)[idx]
+
+
+#6h CD3 vs 1h CD3
+res6hcd3CD3 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_CD3","1h_CD3"))
+res6hcd3CD3
+summary(res6hcd3CD3)
+res6hcd3CD3 <- res6hcd3CD3[order(res$pvalue),]
+
+plotMA(res6hcd3CD3, ylim=c(-5,12))
+
+idx <- identify(res6hcd3CD3$baseMean, res6hcd3CD3$log2FoldChange)
+rownames(res6hcd3CD3)[idx]
+
+
+#6h IL12 vs 1h IL12
+res6hil12IL12 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL12","1h_IL12"))
+res6hil12IL12
+summary(res6hil12IL12)
+res6hil12IL12 <- res6hil12IL12[order(res$pvalue),]
+
+plotMA(res6hil12IL12, ylim=c(-7,6))
+
+idx <- identify(res6hil12IL12$baseMean, res6hil12IL12$log2FoldChange)
+rownames(res6hil12IL12)[idx]
+
+
+#6h IL18 vs 1h IL18
+res6hil18IL18 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL18","1h_IL18"))
+res6hil18IL18
+summary(res6hil18IL18)
+res6hil18IL18 <- res6hil18IL18[order(res$pvalue),]
+
+plotMA(res6hil18IL18, ylim=c(-7,5))
+
+idx <- identify(res6hil18IL18$baseMean, res6hil18IL18$log2FoldChange)
+rownames(res6hil18IL18)[idx]
+
+
+
+
+
+
+
 
 resultsNames(ddskept)
 
