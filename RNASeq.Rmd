@@ -13,10 +13,16 @@ knitr::opts_chunk$set(echo = TRUE)
 setwd("/Users/mckenzir/Desktop/Others/RNAseq")
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
-
 BiocManager::install("DESeq2")
+  
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("apeglm")
+
+
 library(DESeq2)
 library(tidyverse)
+library(apeglm)
 
 #https://github.com/kpatel427/YouTubeTutorials/blob/main/runDESeq2.R
 
@@ -49,6 +55,8 @@ dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = sample_info,
                               design = ~ Time_treatment)
 
+head(counts_matrix)
+
 #Pre-filtering
 
 smallestGroupSize <- 3
@@ -57,7 +65,9 @@ ddskeep <- dds[keep,]
 
 #Reference level
 
-ddskeep$Time_treatment <- factor(dds$Time_treatment, levels = c("1h_PBS"))
+ddskeep$Time_treatment <- factor(dds$Time_treatment, levels = c("1h_CD3", "1h_PBS"))
+
+ddskeep$condition <- relevel(ddskeep$condition, ref = "1h_PBS")
 
 #"6h_PBS", "1h_CD3", "6h_CD3", "1h_IL12", "6h_IL12", "1h_IL18", "6h_IL18"
 
@@ -70,8 +80,46 @@ res <- results(ddskept)
 res
 
 
+res <- results(ddskept, contrast=c("Time_treatment","1h_CD3","1h_PBS"))
+
+
 resultsNames(ddskept)
 
+#LFC
+resLFC <- lfcShrink(ddskept, coef=2, type="apeglm")
+resLFC
+summary(resLFC)
+
+plotMA(resLFC, ylim=c(-11,2))
+idx <- identify(resLFC$baseMean, resLFC$log2FoldChange)
+rownames(resLFC)[idx]
+
+#LRT
+ddsLRT <- DESeq(ddskept, test="LRT", reduced= ~ 1)
+resLRT <- results(ddsLRT)
+resLRT
+summary(resLRT)
+
+plotMA(resLRT, ylim=c(-11,3))
+idx <- identify(resLRT$baseMean, resLRT$log2FoldChange)
+rownames(resLRT)[idx]
+
+#Playing around with the difference DESeq2 functions
+ddsestSF <- estimateSizeFactors(ddskept)
+ddsestSF
+resSF <- results(ddsestSF)
+resSF
+summary(resSF)
+
+sizeFactors(ddskept)
+sizeFactors(ddsestSF)
+
+fpm(ddskept)
+
+ddsestDis <- estimateDispersions(ddskept)
+ddsestDis
+resDis <- results(ddsestDis)
+resDis
 
 #Order by pvalue 
 resOrdered <- res[order(res$pvalue),]
@@ -126,7 +174,7 @@ resPBS <- resPBS[order(res$pvalue),]
 
 #adj p-value<0.05, LFC 1447 up, 1470 down
 
-plotMA(resPBS, ylim=c(-3,7))
+plotMA(resPBS, ylim=c(-7,3))
 
 idx <- identify(resPBS$baseMean, resPBS$log2FoldChange)
 rownames(resPBS)[idx]
