@@ -399,164 +399,295 @@ ggplot(pcaData2, aes(PC1, PC2, color=Sex, shape=Mouse)) +
 ```{r Contrasts DESeq, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-#All seems like a repeat of above
-#In the MAplot section
-
-results(ddskept, contrast=c("Time_treatment","1h_PBS" ,"1h_CD3" ))
-#contrast = c(factor, numerator, denominator)
-
-resultsNames(ddskept)
-#"Intercept""Time_treatment_1h_IL12_vs_1h_CD3""Time_treatment_1h_IL18_vs_1h_CD3""Time_treatment_1h_PBS_vs_1h_CD3""Time_treatment_6h_CD3_vs_1h_CD3""Time_treatment_6h_IL12_vs_1h_CD3""Time_treatment_6h_IL18_vs_1h_CD3" "Time_treatment_6h_PBS_vs_1h_CD3" 
-
-#Interactions
-
-ddskept$Time_treatment <- factor(paste0(ddskept$Time, ddskept$Treatment))
-design(ddskept) <- ~ Time_treatment
-ddsK <- DESeq(ddskept)
-resultsNames(ddsK)
-
-#Potentially have to do all "1hPBS", "6hPBS", "1hCD3", "6hCD3", "1hIL12", "6hIL12", "1hIL18", "6hIL18"
-results(ddsK, contrast=c("Time_treatment", "1hPBS", "1hCD3"))
-
-PCa <- plotCounts(ddsK, 'Ifng', intgroup="Time_treatment", 
-                returnData=TRUE)
-                
-ggplot(PCa, aes(x=Time_treatment, y=count)) + 
-  geom_point(position=position_jitter(w=0.1,h=0)) + scale_y_log10(breaks=c(0, 1000,5000,10000,50000,100000))
-
-
-
-```{r multifactor DESeq, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-#Don't think this works for the data set
-#ends up being the same as the analysis above
-
-colData(dds)
-ddsMF <- dds
-
-levels(ddsMF$Time_treatment)
-
-levels(ddsMF$Time_treatment) <- sub("_-.*", "", levels(ddsMF$Time_treatment))
-levels(ddsMF$Time_treatment)
-
-design(ddsMF) <- formula(~ Time_treatment)
-ddsMF <- DESeq(ddsMF)
-
-resMF <- results(ddsMF)
-head(resMF)
-
-```{r Other DESeq, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-#Need to run this again to check it all and compare it to the analysis above
-
-dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
-                              colData = sample_info,
-                              design = ~ Time_treatment)
-
-ddsDE <- DESeq(dds)
-
-resultsNames(ddsDE)
-
-keepdds_200 <- rowSums(counts(dds)) >= 200
-
-ddskeep <- dds[keepdds_200,]
-
-dds$Time_treatment <- factor(dds$Time_treatment, levels = c("PBS"))
-
-ddsDET_T <- DESeq(dds2)
-resT_T <- results(ddsDET_T)
-
-summary(resT_T)
-
-resT_T0.05 <- results(ddsDET_T, alpha = 0.05)
-summary(resT_T0.05)
-
-
-```{r DESeq with Time and Treatment, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-#Need to run this again to check it all and compare it to the analysis above
-
-dds2 <- DESeqDataSetFromMatrix(countData = counts_matrix,
-                              colData = sample_info,
-                              design = ~ Time + Treatment)
-
-#Pre-filtering
-
-smallestGroupSize <- 4
-keep2 <- rowSums(counts(dds2) >= 200) >= smallestGroupSize
-dds2keep <- dds2[keep2,]
-
-#Reference level
-
-resultsNames(dds2kept)
-
-dds2keep$Time <- factor(dds2$Time, levels = c("1h"))
-#"6h_PBS", "1h_CD3", "6h_CD3", "1h_IL12", "6h_IL12", "1h_IL18", "6h_IL18"
-
-#droplevel to check if samples are blank
-dds2keep$Time_treatment <- droplevels(dds2$Time_treatment)
-
-dds2kept <- DESeq(dds2keep)
-dds2kept
-res2 <- results(dds2kept)
-res2
-
-resultsNames(dds2kept)
-
-#significance of 0.05
-res205 <- results(dds2kept, alpha=0.05)
-summary(res205)
-res205
-res205 <- res205[order(res$pvalue),]
-
-
 #MAplot for these results
-plotMA(res205, ylim=c(-2,2))
+<!-- Arianne - MA plot should be of all genes tested - fine to explore, but for final plot don't filter.-->
+```{r}
+plotMA(res05, ylim=c(-2,2))
 
-plotMA(res205, ylim=c(-15,2))
+plotMA(res05, ylim=c(-10,3))
 
-idx <- identify(res205$baseMean, res205$log2FoldChange)
-rownames(res205)[idx]
+idx <- identify(res05$baseMean, res05$log2FoldChange)
+rownames(res05)[idx]
 
-vsd2 <- vst(dds2kept, blind=FALSE)
-
-
-plotPCA(vsd2, intgroup=c("Time", "Treatment"))
-
-plotPCA(vsd2, intgroup=c("Sex", "Mouse"))
+#8 = Ifng, 7 = Tnf
 
 
+plotCounts(ddskept, gene=which.min(res$padj), intgroup="Time_treatment")
 
-
-ddsDE2 <- DESeq(dds2)
-resultsNames(ddsDE2)
-
-keepdds2_200 <- rowSums(counts(dds2)) >= 200
-dds2keep <- dds2[keepdds2_200,]
-
-dds2$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
-
-#Filtered to remove any genes with fewer than 200 counts
-
-dds2keep$Time_Treatment <- factor(dds$Time_treatment, levels = c("PBS"))
-dds2keepDET_T <- DESeq(dds2keep)
-res2keepT_T0.05 <- results(dds2keepDET_T, alpha = 0.05)
-summary(res2keepT_T0.05)
-
-```{r cars}
-
+plotCounts(ddskept, "Ifng",intgroup="Time_treatment")
+plotCounts(ddskept, "Tnf",intgroup="Time_treatment")
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+#A nicer plot
+<!-- Arianne - you can make this even prettier by setting "theme_classic()" and other parameters -->
 
-```{r pressure, echo=FALSE}
+```{r}
+library("ggplot2") #ANDREW-Ideally all packages are loaded at start, though in this case ggplot is included in tidyverse anyway
+d <- plotCounts(ddskept, "Ifng",intgroup="Time_treatment", 
+                returnData=TRUE)
+ggplot(d, aes(x=Time_treatment, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) +
+  scale_y_log10(breaks=c(0,1000,5000,10000,50000,100000,500000))+ 
+  theme_classic()
 
+e <- plotCounts(ddskept, "Tnf",intgroup="Time_treatment", 
+                returnData=TRUE)
+ggplot(e, aes(x=Time_treatment, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) +
+  scale_y_log10(breaks=c(0,1000,5000,10000,50000))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#Comparisons between conditions
+
+#6h PBS vs 1h PBS
+```{r}
+resPBS <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_PBS","1h_PBS"))
+resPBS
+summary(resPBS)
+resPBS <- resPBS[order(resPBS$pvalue),] # it said "res$pvalue", corrected now to "resPBS$pvalue"
+#adj p-value<0.05, LFC 1447 up, 1470 down
+#Andrew-Comparing with above I got LFC 256 up, LFC 254 down. Presumably the significance between our two controls is lower now that we are controlling for sex differences. 
+# Arianne - changing to mouse, I get a LOT of DE genes, but looking at the top ones, this looks reasonable. I think it will be important to compare each condition to its time-matched control
+
+plotMA(resPBS, ylim=c(-7,3))
+
+idx <- identify(resPBS$baseMean, resPBS$log2FoldChange)
+rownames(resPBS)[idx]
+```
+
+
+#1h CD3 vs 1h PBS
+```{r}
+res1hPBSCD3 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","1h_CD3","1h_PBS"))
+res1hPBSCD3
+summary(res1hPBSCD3)
+res1hPBSCD3 <- res1hPBSCD3[order(res1hPBSCD3$pvalue),]#likewise corrected
+#adj p-value<0.05, LFC 55 up, 0 down
+#ANDREW- LFC 14 up, 2 down
+#Arianne - 131 up and 4 down - note I won't keep running and comparing from now on - I'll just check the code
+
+plotMA(res1hPBSCD3, ylim=c(-2,11))
+
+idx <- identify(res1hPBSCD3$baseMean, res1hPBSCD3$log2FoldChange)
+rownames(res1hPBSCD3)[idx]
+```
+
+
+#1h IL12 vs 1h PBS
+```{r}
+res1hPBSIL12 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","1h_IL12","1h_PBS"))
+res1hPBSIL12
+summary(res1hPBSIL12)
+res1hPBSIL12 <- res1hPBSIL12[order(resres1hPBSIL12$pvalue),]# likewise corrected
+
+#adj p-value<0.05, LFC 26 up, 1 down
+#ANDREW- LFC 9 up, 2 down
+plotMA(res1hPBSIL12, ylim=c(-3,5))
+
+idx <- identify(res1hPBSIL12$baseMean, res1hPBSIL12$log2FoldChange)
+rownames(res1hPBSIL12)[idx]
+```
+
+
+#1h IL18 vs 1h PBS
+```{r}
+res1hPBSIL18 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","1h_IL18","1h_PBS"))
+res1hPBSIL18
+summary(res1hPBSIL18)
+res1hPBSIL18 <- res1hPBSIL18[order(res1hPBSIL18$pvalue),]# again
+
+#adj p-value<0.05, LFC 0 up, 0 down
+#ANDREW- LFC 0 up, 2 down
+
+plotMA(res1hPBSIL18, ylim=c(-2,2))
+
+idx <- identify(res1hPBSIL18$baseMean, res1hPBSIL18$log2FoldChange)
+rownames(res1hPBSIL18)[idx]
+```
+
+
+#6h CD3 vs 6h PBS
+```{r}
+res6hPBSCD3 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_CD3","6h_PBS"))
+res6hPBSCD3
+summary(res6hPBSCD3)
+res6hPBSCD3 <- res6hPBSCD3[order(res6hPBSCD3$pvalue),]# again
+
+#adj p-value<0.05, LFC 3006 up, 2680 down
+#ANDREW- LFC 1404 up, 927 down
+
+plotMA(res6hPBSCD3, ylim=c(-3,15))
+
+idx <- identify(res6hPBSCD3$baseMean, res6hPBSCD3$log2FoldChange)
+rownames(res6hPBSCD3)[idx]
+```
+
+
+#6h IL12 vs 6h PBS
+```{r}
+res6hPBSIL12 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL12","6h_PBS"))
+res6hPBSIL12
+summary(res6hPBSIL12)
+res6hPBSIL12 <- res6hPBSIL12[order(res6hPBSIL12$pvalue),]#again
+
+#adj p-value<0.05, LFC 684 up, 517 down
+#ANDREW- LFC 147 up, 49 down
+plotMA(res6hPBSIL12, ylim=c(-4,8))
+
+idx <- identify(res6hPBSIL12$baseMean, res6hPBSIL12$log2FoldChange)
+rownames(res6hPBSIL12)[idx]
+```
+
+
+#6h IL18 vs 6h PBS
+```{r}
+res6hPBSIL18 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL18","6h_PBS"))
+res6hPBSIL18
+summary(res6hPBSIL18)
+res6hPBSIL18 <- res6hPBSIL18[order(res6hPBSIL18$pvalue),]#again
+
+#adj p-value<0.05, LFC 4 up, 0 down
+#ANDREW- LFC 0 up, 0 down
+
+plotMA(res6hPBSIL18, ylim=c(-2,6))
+
+idx <- identify(res6hPBSIL18$baseMean, res6hPBSIL18$log2FoldChange)
+rownames(res6hPBSIL18)[idx]
+```
+
+<!-- ANDREW- With this and the previous results it doesn't look like the IL18 treatment is working...
+Arianne - may not be transcriptional :) -->
+
+#6h CD3 vs 1h CD3
+```{r}
+res6hcd3CD3 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_CD3","1h_CD3"))
+res6hcd3CD3
+summary(res6hcd3CD3)
+res6hcd3CD3 <- res6hcd3CD3[order(res6hcd3CD3$pvalue),]#again
+
+#adj p-value<0.05, LFC 3069 up, 3103 down
+#ANDREW- LFC 1667 up, 1283 down
+
+plotMA(res6hcd3CD3, ylim=c(-5,12))
+
+idx <- identify(res6hcd3CD3$baseMean, res6hcd3CD3$log2FoldChange)
+rownames(res6hcd3CD3)[idx]
+```
+
+
+#6h IL12 vs 1h IL12
+```{r}
+res6hil12IL12 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL12","1h_IL12"))
+res6hil12IL12
+summary(res6hil12IL12)
+res6hil12IL12 <- res6hil12IL12[order(res6hil12IL12$pvalue),]#again
+
+#adj p-value<0.05, LFC 1881 up, 1792 down
+#ANDREW- LFC 431 up, 392 down
+
+plotMA(res6hil12IL12, ylim=c(-7,6))
+
+idx <- identify(res6hil12IL12$baseMean, res6hil12IL12$log2FoldChange)
+rownames(res6hil12IL12)[idx]
+```
+
+
+#6h IL18 vs 1h IL18
+```{r}
+res6hil18IL18 <- results(ddskept, alpha=0.05, contrast=c("Time_treatment","6h_IL18","1h_IL18"))
+res6hil18IL18
+summary(res6hil18IL18)
+res6hil18IL18 <- res6hil18IL18[order(res$pvalue),]
+
+#adj p-value<0.05, LFC 1493 up, 1447 down
+#ANDREW- LFC 317 up, 294 down
+
+plotMA(res6hil18IL18, ylim=c(-7,5))
+
+idx <- identify(res6hil18IL18$baseMean, res6hil18IL18$log2FoldChange)
+rownames(res6hil18IL18)[idx]
+```
+
+#Heatmap DESeq
+```{r}
+#install.packages('pheatmap') #ANDREW- Again, not ideal to leave install code in. 
+library("pheatmap")
+```
+
+```{r}
+ntd <- normTransform(ddskept)
+#Need normalised data for the heatmap
+#Can do these transformations too
+vsd <- vst(ddskept, blind=FALSE)
+rld <- rlog(ddskept, blind=FALSE)
+
+select <- order(rowMeans(counts(ddskept,normalized=TRUE)),
+                decreasing=TRUE)[1:20] #ANDREW- I don't think this does what you think it does, also the order function doesn't appear to be sorting properly. If selecting genes to plot I would use highly variable genes (HVGs) or defining genes for each condition. 
+# Arianne - I actually think this has worked in that it has selected the most highly expressed genes (mean-wise) in the dataset. Whether that is what you want is another matter... genes that were most differentially expressed might be more informative
+df <- as.data.frame(colData(ddskept)[,c("Time_treatment","Mouse")])
+pheatmap(assay(ntd)[select,], cluster_rows=TRUE, show_rownames=TRUE,
+         cluster_cols=TRUE, annotation_col=df)
+```
+
+#Can do these heatmaps with the other data transformations too
+```{r}
+pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=TRUE,
+         cluster_cols=FALSE, annotation_col=df)
+
+pheatmap(assay(rld)[select,], cluster_rows=FALSE, show_rownames=TRUE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+
+         
+#Sample to sample distances
+```{r}
+sampleDists <- dist(t(assay(vsd)))
+
+#install.packages("RColorBrewer") #ANDREW- remove install, move library to top
+library("RColorBrewer")
+
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(vsd$Sample_name, sep="-")
+colnames(sampleDistMatrix) <- paste(vsd$Sample_name, sep="-")
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255) #ANDREW- Personally I really like the 'Spectral' pallete for heatmaps, feel free to have a go.
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+
+
+#PCA plot
+```{r}
+plotPCA(vsd, intgroup=c("Time", "Treatment"))
+
+plotPCA(vsd, intgroup=c("Time_treatment", "Replicate"))
+
+plotPCA(vsd, intgroup=c("Sex", "Mouse")) #ANDREW- The Male:ARAA15.1e clearly seems to be seperating from the rest. Is this from prep? 
+```
+
+
+#Time and treatment
+```{r}
+pcaData <- plotPCA(vsd, intgroup=c("Time", "Treatment"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+ggplot(pcaData, aes(PC1, PC2, color=Time, shape=Treatment)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed()
+#ANDREW- CD3 treatment really seems to drive a distinct response. Still concerned that IL18 is no different than PBS...
+```
+
+
+#Sex and Mouse
+```{r}
+pcaData2 <- plotPCA(vsd, intgroup=c("Sex", "Mouse"), returnData=TRUE)
+percentVar2 <- round(100 * attr(pcaData2, "percentVar"))
+ggplot(pcaData2, aes(PC1, PC2, color=Sex, shape=Mouse)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar2[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar2[2],"% variance")) + 
+  coord_fixed()
+```
