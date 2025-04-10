@@ -6,6 +6,13 @@ date: "2025-02-04"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(DESeq2)
+library(tidyverse)
+library(apeglm)
+library(pheatmap)
+library(RColorBrewer)
+
 ```
 
 ## starting info
@@ -147,6 +154,7 @@ plotCounts(ddskept, gene=which.min(res$padj), intgroup="Time_treatment")
 
 plotCounts(ddskept, "Ifng",intgroup="Time_treatment")
 plotCounts(ddskept, "Tnf",intgroup="Time_treatment")
+plotCounts(ddskept, "Gzmb",intgroup="Time_treatment")
 
 #A nicer plot
 library("ggplot2")
@@ -161,6 +169,13 @@ e <- plotCounts(ddskept, "Tnf",intgroup="Time_treatment",
 ggplot(e, aes(x=Time_treatment, y=count)) + 
   geom_point(position=position_jitter(w=0.1,h=0)) +
   scale_y_log10(breaks=c(0,1000,5000,10000,50000))
+  
+  f <- plotCounts(ddskept, "Gzmb",intgroup="Time_treatment", 
+                returnData=TRUE)
+ggplot(f, aes(x=Time_treatment, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) +
+  scale_y_log10(breaks=c(0,1000,10000,100000,1000000,10000000,100000000,1000000000,10000000000))
+  
 
 ```{r Comparisons between conditions, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
